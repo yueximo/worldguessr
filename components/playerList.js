@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { FaCopy } from 'react-icons/fa6';
 import { toast } from 'react-toastify';
 
-export default function PlayerList({ multiplayerState, playAgain, backBtn, startGameHost, onEditClick }) {
+export default function PlayerList({ multiplayerState, playAgain, backBtn, startGameHost, onEditClick, onContinue }) {
   const { t: text } = useTranslation("common");
 
   const players = (multiplayerState?.gameData?.finalPlayers ?? multiplayerState?.gameData?.players).sort((a, b) => b.score - a.score);
@@ -18,6 +18,25 @@ export default function PlayerList({ multiplayerState, playAgain, backBtn, start
 
   return (
     <div className="multiplayerLeaderboard">
+      {multiplayerState?.gameData?.state === 'getready' && 
+       multiplayerState?.gameData?.curRound !== 1 && 
+       multiplayerState?.gameData?.curRound <= multiplayerState?.gameData?.rounds && (
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.85)', // Darker background
+          borderRadius: '8px',
+          padding: '25px 30px',  // Bigger padding
+          margin: '0 auto 30px auto', // Add margin below
+          maxWidth: '600px',  // Wider box
+          textAlign: 'center'
+        }}>
+          <p style={{
+            fontSize: '24px',  // Bigger text
+            fontWeight: 'bold',
+            color: 'white'
+          }}>Take a moment to discuss this location with the group!</p>
+        </div>
+      )}
+
       <span className="bigSpan">
         {gameOver?text("gameOver"):waitingForStart?host?text("yourPrivateGame"):text("privateGame"):text("leaderboard")}
         {waitingForStart && <span style={{color: "white"}}> ({text("roundsCount",{rounds:multiplayerState.gameData?.rounds})}
@@ -126,7 +145,7 @@ export default function PlayerList({ multiplayerState, playAgain, backBtn, start
         </>
       )}
 
-      {
+{
         gameOver && (
 
           <div className="multiplayerFinalBtns">
@@ -160,6 +179,19 @@ export default function PlayerList({ multiplayerState, playAgain, backBtn, start
 
 { waitingForStart && !host && (multiplayerState?.gameData?.rounds== multiplayerState?.gameData?.generated) && (
           <p style={{color: "red"}}>{text("waitingForHostToStart")}...</p>
+      )}
+
+      {gameOver && !host && !multiplayerState.gameData?.public && (
+        <p style={{color: "red"}}>{text("waitingForHostToContinue")}...</p>
+      )}
+
+      {host && (
+        <div className="multiplayerFinalBtns">
+          <button className="gameBtn continueBtn" onClick={onContinue}>
+            <span>{text("continue")}</span>
+            <span className="arrow">→</span>
+          </button>
+        </div>
       )}
     </div>
   );

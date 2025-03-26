@@ -13,7 +13,11 @@ https://github.com/codergautam/worldguessr
 import fs from 'fs';
 import { config } from 'dotenv';
 import lookup from "coordinate_to_country"
-const __dirname = import.meta.dirname;
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 config();
 

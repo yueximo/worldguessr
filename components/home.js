@@ -91,7 +91,7 @@ export default function Home({ }) {
   const [screen, setScreen] = useState("home");
   const [loading, setLoading] = useState(false);
   // game state
-  const [latLong, setLatLong] = useState({ lat: 0, long: 0 })
+  const [latLong, setLatLong] = useState({ lat: 0, long: 0, hint: null })
   const [streetViewShown, setStreetViewShown] = useState(false)
   const [gameOptionsModalShown, setGameOptionsModalShown] = useState(false);
   // location aka map slug
@@ -1144,7 +1144,7 @@ setShowCountryButtons(false)
               }, 1000)
             } else {
               // create Party
-              // handleMultiplayerAction("createPrivateGame")
+              handleMultiplayerAction("createPrivateGame")
             }
 
             }
@@ -1801,6 +1801,10 @@ setShowCountryButtons(false)
             data.locations[i].long = data.locations[i].lng;
             delete data.locations[i].lng;
           }
+          // Ensure hint is a string if present
+          if(data.locations[i].hint !== undefined) {
+            data.locations[i].hint = String(data.locations[i].hint);
+          }
         }
 
         // shuffle data.locations
@@ -1933,7 +1937,7 @@ setShowCountryButtons(false)
 
         return Array.from(document.getElementsByTagName('style')).some(style => {
             const content = style.textContent;
-            console.log("content", content)
+            // console.log("content", content)
             return cheatStyleSignatures.every(signature =>
                 content.includes(signature)
             );

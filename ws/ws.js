@@ -837,9 +837,21 @@ app.ws('/wg', {
       if (json.type === 'startGameHost' && player.gameId && games.has(player.gameId)) {
         const game = games.get(player.gameId);
         if (game.players[player.id].host) {
+          if (game.state === 'waiting') {
+            // Start the game
+            game.start();
+          }
+        }
+      }
 
-
-          game.start();
+      if (json.type === 'continue' && player.gameId && games.has(player.gameId)) {
+        const game = games.get(player.gameId);
+        if (game.players[player.id].host && game.state === 'getready') {
+          // Start the next round
+          game.state = 'guess';
+          game.nextEvtTime = Date.now() + game.timePerRound;
+          game.clearGuesses();
+          game.sendStateUpdate();
         }
       }
 
@@ -1099,7 +1111,8 @@ app.ws('/wg', {
 try {
   const gamestate = JSON.parse(fs.readFileSync(tmpdir() + `/gamestate.worldguessr`));
   if (gamestate && Date.now() - gamestate.time < 1000 * 60) {
-    console.log('Recovered gamestate', gamestate.games.length, 'games', gamestate.players.length, 'players');
+    console.log('Recovered gamestate', gamestate.games.length, 'games', gamestate.players.length, 'players', currentDate());
+    console.error('Recovered gamestate', gamestate.games.length, 'games', gamestate.players.length, 'players', currentDate()); // so it shows up in the error log after a crash
 
     for (const player of gamestate.players) {
       const newPlayer = Player.fromJSON(player);
@@ -1226,15 +1239,14 @@ try {
         if(game.curRound > game.rounds || game.readyToEnd) {
           game.end();
           // game over
-
-        } else {
-        game.state = 'guess';
-        game.nextEvtTime = Date.now() + game.timePerRound;
-        game.clearGuesses();
-
-        game.sendStateUpdate();
+        } else if (game.curRound === 1) {
+          // Automatically progress only for first round
+          game.state = 'guess';
+          game.nextEvtTime = Date.now() + game.timePerRound;
+          game.clearGuesses();
+          game.sendStateUpdate();
         }
-
+        // Otherwise wait for host continue message
       } else if (game.state === 'guess' && Date.now() > game.nextEvtTime) {
         game.givePoints();
         if(game.curRound <= game.rounds) {

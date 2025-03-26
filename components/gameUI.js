@@ -21,12 +21,14 @@ import fixBranding from "./utils/fixBranding";
 import gameStorage from "./utils/localStorage";
 import RoundOverScreen from "./roundOverScreen";
 import HealthBar from "./duelHealthbar";
+import Hint from "./hint";
 
 const MapWidget = dynamic(() => import("../components/Map"), { ssr: false });
 
 export default function GameUI({ inCoolMathGames, miniMapShown, setMiniMapShown, singlePlayerRound, setSinglePlayerRound, showDiscordModal, setShowDiscordModal, inCrazyGames, showPanoOnResult, setShowPanoOnResult, countryGuesserCorrect, setCountryGuesserCorrect, otherOptions, onboarding, setOnboarding, countryGuesser, options, timeOffset, ws, multiplayerState, backBtnPressed, setMultiplayerState, countryStreak, setCountryStreak, loading, setLoading, session, gameOptionsModalShown, setGameOptionsModalShown, latLong, streetViewShown, setStreetViewShown, loadLocation, gameOptions, setGameOptions, showAnswer, setShowAnswer, pinPoint, setPinPoint, hintShown, setHintShown, xpEarned, setXpEarned, showCountryButtons, setShowCountryButtons }) {
   const { t: text } = useTranslation("common");
   const [showStreakAdBanner, setShowStreakAdBanner] = useState(false);
+  const [roundEndCountdown, setRoundEndCountdown] = useState(10);
 
   function loadLocationFuncRaw() {
     setShowStreakAdBanner(false)
@@ -164,10 +166,16 @@ export default function GameUI({ inCoolMathGames, miniMapShown, setMiniMapShown,
 
 
   useEffect(() => {
-
     const interval = setInterval(() => {
     if(multiplayerState?.inGame && multiplayerState?.gameData?.nextEvtTime) {
-      setTimeToNextMultiplayerEvt(Math.max(0,Math.floor(((multiplayerState.gameData.nextEvtTime - Date.now()) - timeOffset) / 100)/10))
+      // If we're in getready state and it's not the first round, set a very large time
+      if(multiplayerState?.gameData?.state === 'getready' && 
+         multiplayerState?.gameData?.curRound !== 1 && 
+         multiplayerState?.gameData?.curRound <= multiplayerState?.gameData?.rounds) {
+        setTimeToNextMultiplayerEvt(999999); // Set a very large number to effectively pause
+      } else {
+        setTimeToNextMultiplayerEvt(Math.max(0,Math.floor(((multiplayerState.gameData.nextEvtTime - Date.now()) - timeOffset) / 100)/10))
+      }
     }
     }, 100)
 
@@ -451,14 +459,34 @@ export default function GameUI({ inCoolMathGames, miniMapShown, setMiniMapShown,
 
   const multiplayerTimerShown = !((loading||showAnswer||!multiplayerState||(multiplayerState?.gameData?.state === 'getready' && multiplayerState?.gameData?.curRound === 1)||multiplayerState?.gameData?.state === 'end'));
   const onboardingTimerShown = !((loading||showAnswer||!onboarding));
+
+  console.log("TIME TO NEXT MULTIPLAYER EVT", timeToNextMultiplayerEvt)
+  console.log("MULTIPLAYER STATE", multiplayerState?.gameData?.state)
+
+  useEffect(() => {
+    let interval;
+    if (multiplayerState?.gameData?.state === 'getready' && 
+        multiplayerState?.gameData?.curRound !== 1 && 
+        roundEndCountdown > 0) {
+      interval = setInterval(() => {
+        setRoundEndCountdown(prev => prev - 1);
+      }, 350);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (multiplayerState?.gameData?.state !== 'getready') {
+        setRoundEndCountdown(10); // Reset countdown when leaving getready state
+      }
+    };
+  }, [multiplayerState?.gameData?.state, roundEndCountdown]);
+
   return (
     <div className="gameUI">
 
 { !onboarding && !inCrazyGames && !inCoolMathGames && (!session?.token?.supporter)  && (
     <div className={`topAdFixed ${(multiplayerTimerShown || onboardingTimerShown || singlePlayerRound)?'moreDown':''}`}>
-      <Ad
-      unit={"worldguessr_gameui_ad"}
-    inCrazyGames={inCrazyGames} showAdvertisementText={false} screenH={height} types={[[728,90]]} centerOnOverflow={600} screenW={Math.max(400, width-450)} vertThresh={0.3} />
+    <Hint types={[[728,90]]} centerOnOverflow={600} screenH={height} screenW={Math.max(400, width-450)} vertThresh={0.3} locationHint={latLong?.hint} />  
     </div>
 )}
 
@@ -661,19 +689,24 @@ text("round", {r:multiplayerState?.gameData?.curRound, mr: multiplayerState?.gam
           )
         }
 
-        {multiplayerState && multiplayerState.inGame && !multiplayerState?.gameData?.duel && multiplayerState?.gameData?.state === 'getready' && multiplayerState?.gameData?.curRound === 1 && (
-          <BannerText text={
-            text("gameStartingIn", {t:timeToNextMultiplayerEvt})
-          } shown={true} />
-        )}
-
-
-        {multiplayerState && multiplayerState.inGame && !multiplayerState?.gameData?.duel && ((multiplayerState?.gameData?.state === 'getready' && timeToNextMultiplayerEvt < 5 && multiplayerState?.gameData?.curRound !== 1 && multiplayerState?.gameData?.curRound <= multiplayerState?.gameData?.rounds)||(multiplayerState?.gameData?.state === "end")) && (
-          <PlayerList multiplayerState={multiplayerState} playAgain={() => {
-            backBtnPressed(true, "unranked")
-          }} backBtn={() => {
-            backBtnPressed()
-          }} />
+        {multiplayerState && multiplayerState.inGame && !multiplayerState?.gameData?.duel && 
+          ((multiplayerState?.gameData?.state === 'getready' && 
+            multiplayerState?.gameData?.curRound !== 1 && 
+            multiplayerState?.gameData?.curRound <= multiplayerState?.gameData?.rounds &&
+            roundEndCountdown === 0) ||  // Only show when countdown reaches 0
+           (multiplayerState?.gameData?.state === "end")) && (
+          <PlayerList 
+            multiplayerState={multiplayerState} 
+            playAgain={() => {
+              backBtnPressed(true, "unranked")
+            }} 
+            backBtn={() => {
+              backBtnPressed()
+            }}
+            onContinue={() => {
+              ws.send(JSON.stringify({ type: "continue" }));
+            }}
+          />
         )}
 
 

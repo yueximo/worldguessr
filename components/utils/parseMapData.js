@@ -1,4 +1,3 @@
-
 export function extractMapDetails(url) {
   // ex: https://www.google.com/maps/@48.8578055,2.2952078,3a,90y,-45h,128t/data=!3m7!1e1!3m5!1sAF1QipNIA4ndpD21zJIiwr-UPkpStYkHD1IkKysKrLc_!2e10!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipNIA4ndpD21zJIiwr-UPkpStYkHD1IkKysKrLc_%3Dw900-h600-k-no-pi-38-ya-11.956512451171875-ro0-fo90!7i5376!8i2688?coh=205410&entry=ttu
 
@@ -81,7 +80,7 @@ export default function parseMapData(obj) {
       }
     }
 
-    const params = ["lat","lng","heading","pitch","zoom"];
+    const params = ["lat","lng","heading","pitch","zoom","hint"];
     const misspelled = [["latitude"], ["longitude","long","lon"]];
     let data = {};
 
@@ -113,6 +112,10 @@ export default function parseMapData(obj) {
       return;
     }
 
+    // ensure hint is a string if present
+    if (data.hint !== undefined) {
+      data.hint = String(data.hint);
+    }
 
     return data;
   })

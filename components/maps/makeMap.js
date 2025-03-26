@@ -7,13 +7,18 @@ import parseMapData from "../utils/parseMapData";
 export default function MakeMapForm({ map, setMap, createMap }) {
   // map => { slug, name, created_at, created_by, plays, hearts, data, _id, created_by_name, description_short, description_long }
   const [formData, setFormData] = useState({
-    name: map.name,
-    description_short: map.description_short,
-    description_long: map.description_long,
-    data: map.data || []
+    name: map.name || "",
+    description_short: map.description_short || "",
+    description_long: map.description_long || "",
+    data: Array.isArray(map.data) ? map.data : []
   });
+  const [hints, setHints] = useState(
+    Array.isArray(map.data) 
+      ? map.data.map(loc => (typeof loc === 'object' && loc.hint) || "")
+      : []
+  );
   const [uploaded, setUploaded] = useState(false);
-
+  
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -24,13 +29,22 @@ export default function MakeMapForm({ map, setMap, createMap }) {
     setFormData({ ...formData, data: updatedData });
   };
 
+  const handleHintChange = (index, value) => {
+    const updatedHints = [...hints];
+    updatedHints[index] = value;
+    setHints(updatedHints);
+  };
+
   const handleAddUrl = () => {
     setFormData({ ...formData, data: [...formData.data, ""] });
+    setHints([...hints, ""]);
   };
 
   const handleDeleteUrl = (index) => {
     const updatedData = formData.data.filter((_, i) => i !== index);
+    const updatedHints = hints.filter((_, i) => i !== index);
     setFormData({ ...formData, data: updatedData });
+    setHints(updatedHints);
   };
 
   const handleSubmit = (e) => {
@@ -50,10 +64,41 @@ export default function MakeMapForm({ map, setMap, createMap }) {
       return;
     }
 
-    setMap({ ...map, ...formData, progress: true });
-    createMap(formData);
-  };
+    // Parse URLs and combine with hints
+    const combinedData = formData.data.map((url, index) => {
+      // Extract coordinates from Google Maps URL
+      const match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (!match) {
+        toast.error(`Invalid URL format at location ${index + 1}`);
+        return null;
+      }
+      
+      const location = {
+        lat: parseFloat(match[1]),
+        lng: parseFloat(match[2]),
+        heading: 0,
+        pitch: 0,
+        zoom: 3
+      };
 
+      // Add hint if it exists
+      if (hints[index]) {
+        location.hint = hints[index];
+      }
+
+      return location;
+    });
+
+    // Filter out any null values from invalid URLs
+    const validData = combinedData.filter(loc => loc !== null);
+    if (validData.length === 0) {
+      toast.error("No valid locations found");
+      return;
+    }
+
+    setMap({ ...map, ...formData, data: validData, progress: true });
+    createMap({ ...formData, data: validData });
+  };
 
   function handleFileUpload(e) {
     const file = e.target.files[0];
@@ -74,6 +119,15 @@ export default function MakeMapForm({ map, setMap, createMap }) {
         toast.success("Parsed " + parsed.length + " locations");
         setUploaded(true);
         setFormData({ ...formData, data: parsed });
+        // Initialize hints array with existing hints or empty strings
+        setHints(parsed.map(loc => {
+          try {
+            const parsedLoc = JSON.parse(loc);
+            return parsedLoc.hint || "";
+          } catch {
+            return "";
+          }
+        }));
       } catch (e) {
         toast.error("Invalid file format");
       }
@@ -140,7 +194,6 @@ export default function MakeMapForm({ map, setMap, createMap }) {
 
         <div className="make-map-form" style={{ gap: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-
           <h2 style={{marginBottom: '10px'}}>Locations</h2>
 
           <button type="button" style={{padding:'3px',marginLeft: '10px'}} onClick={() => {
@@ -166,10 +219,10 @@ export default function MakeMapForm({ map, setMap, createMap }) {
 
           <span style={{marginBottom: '5px'}}>
 
-<li>Visit Google Maps on a desktop computer</li>
-<li>Drag the orange figure onto the map to open a streetview</li>
-<li>Copy the URL from the address bar of your browser into the textbox</li>
-<li>You can add also add JSON strings with {`{lat, lng, heading, pitch, zoom}`}</li>
+          <li>Visit Google Maps on a desktop computer</li>
+          <li>Drag the orange figure onto the map to open a streetview</li>
+          <li>Copy the URL from the address bar of your browser into the textbox</li>
+          <li>You can add also add JSON strings with {`{lat, lng, heading, pitch, zoom}`}</li>
 
           </span>
 
@@ -181,6 +234,13 @@ export default function MakeMapForm({ map, setMap, createMap }) {
                 value={url}
                 onChange={(e) => handleDataChange(index, e.target.value)}
                 className="url-input"
+              />
+              <input
+                type="text"
+                value={hints[index]}
+                onChange={(e) => handleHintChange(index, e.target.value)}
+                placeholder="Hint (optional)"
+                style={{ marginLeft: '8px' }}
               />
               <button
                 type="button"
@@ -223,15 +283,15 @@ export default function MakeMapForm({ map, setMap, createMap }) {
               </button>
             )
           }
+          </div>
+          <div className="make-map-form" style={{ gap: 0 }}>
+          <button type="submit"
+          onClick={handleSubmit}
+          disabled={map.progress}
+          >
+            {map.progress ? "Loading..." : "Publish"}
+          </button>
         </div>
-        <div className="make-map-form" style={{ gap: 0 }}>
-        <button type="submit"
-        onClick={handleSubmit}
-        disabled={map.progress}
-        >
-          {map.progress ? "Loading..." : "Publish"}
-        </button>
-      </div>
-    </>
-  );
-}
+      </>
+    );
+  }
