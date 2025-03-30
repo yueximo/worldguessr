@@ -46,10 +46,20 @@ var app = express();
 import cors from 'cors';
 import cityGen from './serverUtils/cityGen.js';
 import User from './models/User.js';
-function currentDate() {
-  return new Date().toLocaleString("en-US", { timeZone: "America/Chicago" });
-}
-app.use(cors());
+
+// Update CORS configuration
+const corsOptions = {
+  origin: [
+    'https://worldguessr-frontend.onrender.com',
+    'http://localhost:3000' // for local development
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+
 app.use(bodyParser.json({limit: '5mb'}));
 app.use(bodyParser.urlencoded({limit: '5mb', extended: true, parameterLimit:50000}));
 
