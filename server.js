@@ -47,18 +47,26 @@ import cors from 'cors';
 import cityGen from './serverUtils/cityGen.js';
 import User from './models/User.js';
 
-// Update CORS configuration
-const corsOptions = {
-  origin: [
-    'https://worldguessr-frontend.onrender.com',
-    'http://localhost:3000' // for local development
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-};
+// Add CORS headers middleware before any routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://worldguessr-frontend.onrender.com');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-app.use(cors(corsOptions));
+// Keep the existing cors middleware as well
+app.use(cors({
+  origin: 'https://worldguessr-frontend.onrender.com',
+  credentials: true
+}));
 
 app.use(bodyParser.json({limit: '5mb'}));
 app.use(bodyParser.urlencoded({limit: '5mb', extended: true, parameterLimit:50000}));
