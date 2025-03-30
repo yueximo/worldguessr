@@ -9,6 +9,7 @@
     "start-api": "cross-env  NODE_ENV=production node server.js",
     "start-ws": "cross-env UWS_HTTP_MAX_HEADERS_SIZE=16384 NODE_ENV=production node ws/ws",
     "start-cron": "cross-env NODE_ENV=production node cron.js",
+    "start": "next start -p $PORT",
     "heroku-postbuild": "cross-env  next build"
   },
   "dependencies": {
