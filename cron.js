@@ -37,7 +37,7 @@ configDotenv();
 let countryLocations = {};
 const locationCnt = 2000;
 const batchSize = 10;
-
+const port = process.env.PORT || 3003;
 
 for (const country of countries) {
   countryLocations[country] = [];

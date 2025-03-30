@@ -42,8 +42,7 @@ fs.readFileSync('public/Crazygames_profanity_filter.txt', 'utf8').split('\n').fo
 
 // init state vars
 const dev = process.env.NODE_ENV !== 'production'
-const port = process.env.WS_PORT || 3002;
-
+const port = process.env.PORT || 3002;
 const playersInQueue = new Map();
 
 
