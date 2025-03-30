@@ -47,14 +47,20 @@ import cors from 'cors';
 import cityGen from './serverUtils/cityGen.js';
 import User from './models/User.js';
 
-// Add CORS headers middleware before any routes
+const allowedOrigins = [
+  'https://worldguessr-frontend.onrender.com',
+  'http://localhost:3000'
+];
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://worldguessr-frontend.onrender.com');
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
   
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -62,9 +68,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Keep the existing cors middleware as well
 app.use(cors({
-  origin: 'https://worldguessr-frontend.onrender.com',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
