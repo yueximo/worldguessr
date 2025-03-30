@@ -100,17 +100,17 @@ export default async function handler(req, res) {
     myMaps = myMaps.map((map) => sendableMap(map, user, hearted_maps?hearted_maps.has(map._id.toString()):false, user.staff, true));
     myMaps.sort((a,b) => a.created_at - b.created_at);
     if(myMaps.length > 0) response.myMaps = myMaps;
+    
     // likedMaps
     // find maps liked by user
     const likedMaps = user.hearted_maps ? await Map.find({ _id: { $in: Array.from(user.hearted_maps.keys()) } }) : [];
     let likedMapsSendable = await Promise.all(likedMaps.map(async (map) => {
       let owner;
       if(!map.map_creator_name) {
-      owner = await User.findById(map.created_by);
-      // save map creator name
-      map.map_creator_name = owner.username;
-      await map.save();
-
+        owner = await User.findById(map.created_by);
+        // save map creator name
+        map.map_creator_name = owner.username;
+        await map.save();
       } else {
         owner = { username: map.map_creator_name };
       }
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
       if(method === "recent") {
         maps = await Map.find({ accepted: true }).sort({ created_at: -1 }).limit(100);
       } else if(method === "popular") {
-        maps = await Map.find({ accepted: true })        .select({
+        maps = await Map.find({ accepted: true }).select({
           locationsCnt: { $size: "$data" },
           created_at: 1,
           slug: 1,
@@ -163,11 +163,10 @@ export default async function handler(req, res) {
           accepted: 1,
           reject_reason: 1,
           resubmittable: 1
-      });
+        });
 
-      // sort and limit to 100
-      maps = maps.sort((a,b) => b.hearts - a.hearts).slice(0,100);
-
+        // sort and limit to 100
+        maps = maps.sort((a,b) => b.hearts - a.hearts).slice(0,100);
       } else if(method === "spotlight") {
         maps = await Map.find({ accepted: true, spotlight: true }).limit(100).allowDiskUse(true);
       }
@@ -175,14 +174,14 @@ export default async function handler(req, res) {
       let sendableMaps = await Promise.all(maps.map(async (map) => {
         let owner;
         if(!map.map_creator_name && map.data) {
-         owner = await User.findById(map.created_by);
+          owner = await User.findById(map.created_by);
           // save map creator name
           map.map_creator_name = owner.username;
           await map.save();
         } else {
           owner = { username: map.map_creator_name };
         }
-        return sendableMap(map, owner,hearted_maps?hearted_maps.has(map._id.toString()):false);
+        return sendableMap(map, owner, hearted_maps?hearted_maps.has(map._id.toString()):false);
       }));
 
       response[method] = sendableMaps;
