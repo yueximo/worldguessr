@@ -1,3 +1,4 @@
+I cloned this to play with my team at work! I made very minor changes. The offical repo is here: https://github.com/codergautam/worldguessr
 
 [![WorldGuessr](https://raw.githubusercontent.com/codergautam/worldguessr/master/public/logo.png)](https://worldguessr.com)
 
